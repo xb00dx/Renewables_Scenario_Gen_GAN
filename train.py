@@ -23,7 +23,8 @@ dim_W2 = 128 #second layer neurons
 dim_W3 = 64 #third layer#16 is the maximum value for wind capacity we use. Change to your max value here
 dim_channel = 1 #reserved for future use if multi=channels
 mu, sigma = 0, 0.1 # input Gaussian
-events_num=5 #kind of events
+# events_num=5 #kind of events, for wind, 5 types of events
+events_num = 12 # for solar generation, 12 months
 
 visualize_dim=32
 generated_dim=32
@@ -31,8 +32,8 @@ generated_dim=32
 
 #Comment out corresponding part to reproduce the results for 
 #wind_events_generation, solar_events_generation, spatial_generation respectively
-trX, trY=load_wind()
-#trX, trY=load_solar()
+# trX, trY=load_wind()
+trX, trY=load_solar_data()
 #trX, trY=load_spatial()
 
 print("shape of training samples ", shape(trX))
@@ -71,7 +72,7 @@ Y_np_sample = OneHot(np.random.randint(events_num, size=[visualize_dim]), n=even
 iterations = 0
 k = 4 #control the balance of training D and G
 
-gen_loss_all=[]#16 is the maximum value for wind capacity we use. Change to your max value here
+gen_loss_all=[] #16 is the maximum value for wind capacity we use. Change to your max value here
 P_real=[]
 P_fake=[]
 P_distri=[]
@@ -109,10 +110,10 @@ for epoch in range(n_epochs):
                         })
             discrim_loss_val, p_real_val, p_gen_val = sess.run([d_cost_tf,p_real,p_gen], feed_dict={Z_tf:Zs, image_tf:Xs, Y_tf:Ys})
 
-            '''print("=========== updating G ==========")
-            print("iteration:", iterations)
-            print("gen loss:", gen_loss_val)
-            print("discrim loss:", discrim_loss_val)'''
+            # print("=========== updating G ==========")
+            # print("iteration:", iterations)
+            # print("gen loss:", gen_loss_val)
+            # print("discrim loss:", discrim_loss_val)
 
         else:
             _, discrim_loss_val = sess.run(
@@ -123,10 +124,10 @@ for epoch in range(n_epochs):
                         image_tf:Xs
                         })
 
-            '''print("=========== updating D ==========")
-            print("iteration:", iterations)
-            print("gen loss:", gen_loss_val)
-            print("discrim loss:", discrim_loss_val)'''
+            # print("=========== updating D ==========")
+            # print("iteration:", iterations)
+            # print("gen loss:", gen_loss_val)
+            # print("discrim loss:", discrim_loss_val)
 
             gen_loss_val, p_real_val, p_gen_val = sess.run([g_cost_tf, p_real, p_gen],
                                                        feed_dict={Z_tf: Zs, image_tf: Xs, Y_tf: Ys})
@@ -152,7 +153,7 @@ for epoch in range(n_epochs):
                 })
             generated_samples=generated_samples.reshape([-1,576])
             generated_samples = generated_samples * 16 #16 is the maximum value for wind capacity we use. Change to your max value here
-            csvfile=file('%s.csv' %iterations, 'wb')
+            csvfile=open('%s.csv' %iterations, 'w')
             writer=csv.writer(csvfile)
             writer.writerows(generated_samples)
 
@@ -166,12 +167,13 @@ generated_samples = sess.run(
         Z_tf_sample: Z_np_sample,
         Y_tf_sample: Y_np_sample
     })
+
 generated_samples=generated_samples.reshape([-1,576])
 generated_samples = generated_samples * 16 #16 is the maximum value for wind capacity we use. Change to your max value here
-csvfile=file('sample1.csv', 'wb')
+csvfile=open('sample1.csv', 'w')
 writer=csv.writer(csvfile)
 writer.writerows(generated_samples)
-csvfile=file('label1.csv', 'wb')
+csvfile=open('label1.csv', 'w')
 writer=csv.writer(csvfile)
 writer.writerows(Y_np_sample)
 
