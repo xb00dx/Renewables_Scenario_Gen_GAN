@@ -58,19 +58,20 @@ def load_solar_data():
         rows = [row for row in reader]
     labels = np.array(rows, dtype=int)
     print(shape(labels))
-    nT,nLoc = shape(labels)
     
-    with open('datasets/solar.csv', 'r') as csvfile:
+    # with open('datasets/solar.csv', 'r') as csvfile:
+    with open('datasets/pv_ca_2006.csv', 'r') as csvfile:
         reader = csv.reader(csvfile)
         rows = [row for row in reader]
     rows = np.array(rows, dtype=float)
     # rows=rows[:104832,:] # why 364 days?
     print(shape(rows))
+    nT,nLoc = shape(rows)
     trX = np.reshape(rows.T,(-1,576)) # 24*24, transposed 
     print(shape(trX))
     m = np.ndarray.max(rows)
     print("maximum value of solar power", m)
-    trY=np.tile(labels,(32,1)) # why 32? 
+    trY=np.tile(labels,(nLoc,1)) #
     trX=trX/m
     return trX,trY
 

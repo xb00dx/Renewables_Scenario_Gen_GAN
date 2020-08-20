@@ -13,7 +13,7 @@ from numpy import shape
 import csv
 import matplotlib.pyplot as plt
 
-n_epochs = 70 #Number of overall training epochs on training data
+n_epochs = 1000 #Number of overall training epochs on training data
 learning_rate = 0.0002 
 batch_size = 32
 image_shape = [24,24,1] #The shape for input data
@@ -28,7 +28,6 @@ events_num = 12 # for solar generation, 12 months
 
 visualize_dim=32
 generated_dim=32
-
 
 #Comment out corresponding part to reproduce the results for 
 #wind_events_generation, solar_events_generation, spatial_generation respectively
@@ -78,6 +77,9 @@ P_fake=[]
 P_distri=[]
 discrim_loss=[]
 
+discrim_loss_epoch = []
+P_real_epoch = []
+P_fake_epoch = []
 
 #begin training
 for epoch in range(n_epochs):
@@ -137,27 +139,56 @@ for epoch in range(n_epochs):
                                                        feed_dict={Z_tf: Zs, image_tf: fake_data, Y_tf: Ys})'''
         discrim_loss.append(discrim_loss_val)
 
-
-        if np.mod(iterations, 1000) == 0:
-            print("iterations ", iterations)
-            print("Average P(real)=", p_real_val.mean())
-            print("Average P(gen)=", p_gen_val.mean())
-            print("Discrim loss:", discrim_loss_val)
-            Y_np_sample = OneHot(np.random.randint(5, size=[visualize_dim]), n=events_num)
-            Z_np_sample = np.random.normal(mu, sigma, size=[batch_size, dim_z]).astype(np.float32)
-            generated_samples = sess.run(
-                image_tf_sample,
-                feed_dict={
-                    Z_tf_sample: Z_np_sample,
-                    Y_tf_sample: Y_np_sample
-                })
-            generated_samples=generated_samples.reshape([-1,576])
-            generated_samples = generated_samples * 16 #16 is the maximum value for wind capacity we use. Change to your max value here
-            csvfile=open('%s.csv' %iterations, 'w')
-            writer=csv.writer(csvfile)
-            writer.writerows(generated_samples)
+    
+        # if np.mod(iterations, 1000) == 0:
+        #     print("iterations ", iterations)
+        #     print("Average P(real)=", p_real_val.mean())
+        #     print("Average P(gen)=", p_gen_val.mean())
+        #     print("Discrim loss:", discrim_loss_val)
+        #     Y_np_sample = OneHot(np.random.randint(5, size=[visualize_dim]), n=events_num)
+        #     Z_np_sample = np.random.normal(mu, sigma, size=[batch_size, dim_z]).astype(np.float32)
+        #     generated_samples = sess.run(
+        #         image_tf_sample,
+        #         feed_dict={
+        #             Z_tf_sample: Z_np_sample,
+        #             Y_tf_sample: Y_np_sample
+        #         })
+        #     generated_samples=generated_samples.reshape([-1,576])
+        #     generated_samples = generated_samples #16 is the maximum value for wind capacity we use. Change to your max value here
+        #     csvfile=open('%s.csv' %iterations, 'w')
+        #     writer=csv.writer(csvfile)
+        #     writer.writerows(generated_samples)
 
         iterations += 1
+
+    print("epoch ", epoch)
+    print("Average P(real)=", p_real_val.mean())
+    print("Average P(gen)=", p_gen_val.mean())
+    print("Discrim loss:", discrim_loss_val)
+    Y_np_sample = OneHot(np.random.randint(5, size=[visualize_dim]), n=events_num)
+    Z_np_sample = np.random.normal(mu, sigma, size=[batch_size, dim_z]).astype(np.float32)
+    generated_samples = sess.run(
+        image_tf_sample,
+        feed_dict={
+            Z_tf_sample: Z_np_sample,
+            Y_tf_sample: Y_np_sample
+        })
+    generated_samples=generated_samples.reshape([-1,576])
+    generated_samples = generated_samples # is the maximum value for wind capacity we use. Change to your max value here
+    # csvfile=open('epoch_%s.csv' %epoch, 'w')
+    # writer=csv.writer(csvfile)
+    # writer.writerows(generated_samples)
+    
+    P_real_epoch.append(p_real_val.mean())
+    P_fake_epoch.append(p_gen_val.mean())
+    discrim_loss_epoch.append(discrim_loss_val)
+    
+    # save TF model
+    if np.mod(epoch, 100) == 0:
+        saver = tf.train.Saver() 
+        saver.save(sess, 'solar-generation-model'+str(epoch))
+
+
 
 Y_np_sample = OneHot(np.random.randint(5, size=[visualize_dim]), n=events_num) 
 Zs = np.random.normal(mu, sigma, size=[batch_size, dim_z]).astype(np.float32)
@@ -169,7 +200,7 @@ generated_samples = sess.run(
     })
 
 generated_samples=generated_samples.reshape([-1,576])
-generated_samples = generated_samples * 16 #16 is the maximum value for wind capacity we use. Change to your max value here
+generated_samples = generated_samples #16 is the maximum value for wind capacity we use. Change to your max value here
 csvfile=open('sample1.csv', 'w')
 writer=csv.writer(csvfile)
 writer.writerows(generated_samples)
@@ -182,11 +213,18 @@ writer.writerows(Y_np_sample)
 print("P_real",P_real)
 print("P_fake",P_fake)
 
-plt.plot(P_real,label="real")
-plt.plot(P_fake,label="fake")
+fig ,ax = plt.subplots(figsize = (5,4))
+plt.plot(P_real_epoch,label="real")
+plt.plot(P_fake_epoch,label="fake")
 plt.legend()
-plt.show()
+plt.savefig("loss"+str(n_epochs)+".png")
+#plt.show()
 
-plt.plot(discrim_loss,label="discrim_loss")
+fig ,ax = plt.subplots(figsize = (5,4))
+plt.plot(discrim_loss_epoch,label="discrim_loss")
 plt.legend()
-plt.show()
+plt.savefig("discrim_loss"+str(n_epochs)+".png")
+#plt.show()
+
+saver = tf.train.Saver() 
+saver.save(sess, 'solar-generation-model'+str(n_epochs))
